@@ -1,0 +1,68 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+
+const app = express();
+
+mongoose.connect("mongodb://127.0.0.1:27017/blogDB");
+
+app.set("view engine", "ejs");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+
+const postSchema = new mongoose.Schema({
+    title: String,
+    content: String,
+    comments: [String]
+});
+
+const Post = mongoose.model("Post", postSchema);
+
+// Home Page
+app.get("/", async (req, res) => {
+    const posts = await Post.find();
+    res.render("index", { posts });
+});
+
+// Create Post Form
+app.get("/new", (req, res) => {
+    res.render("new");
+});
+
+// Save Post
+app.post("/new", async (req, res) => {
+    const post = new Post({
+        title: req.body.title,
+        content: req.body.content,
+        comments: []
+    });
+
+    await post.save();
+    res.redirect("/");
+});
+
+// View Single Post
+app.get("/post/:id", async (req, res) => {
+    const post = await Post.findById(req.params.id);
+    res.render("post", { post });
+});
+
+// Add Comment
+app.post("/comment/:id", async (req, res) => {
+    const post = await Post.findById(req.params.id);
+
+    post.comments.push(req.body.comment);
+    await post.save();
+
+    res.redirect("/post/" + req.params.id);
+});
+
+// Delete Post
+app.get("/delete/:id", async (req, res) => {
+    await Post.findByIdAndDelete(req.params.id);
+    res.redirect("/");
+});
+
+app.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
